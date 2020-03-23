@@ -12,6 +12,7 @@
 	<link rel="stylesheet" href="inc/bootstrap-4.4.1/bootstrap.min.css">
 	<link rel="stylesheet" href="inc/bootswatch-flatly/bootstrap.min.css">	
 	
+	<script src="https://cdn.jsdelivr.net/npm/chart.js@2.9.3/dist/Chart.min.js"></script>
 	<script src="lib.js"></script>
 	<script src="classes.js"></script>
 	<script src="simulator.js"></script>
@@ -40,6 +41,7 @@
 
 	<script>	
 		var templateHTML = null;
+		var currentCharts = [];
 
 		function loadTemplate(docName) {
 			var xhttp = new XMLHttpRequest();
@@ -76,8 +78,39 @@
 			coronaSimSettings.populationInt = getSliderValue("populationCapSlider");
 
 			/* Note: this is where all of the magic happens, this method makes a simulator, steps through the sim, and returns html output */
-			el("simulationOutput").innerHTML = generateSimulationOutput(templateHTML, coronaSimSettings);
+			const tableData = generateSimulationOutput(coronaSimSettings);
+			
+			el("simulationOutput").innerHTML = generateTableHTML(tableData, templateHTML, coronaSimSettings)
 			window.scrollBy(0, 200);
+			console.log(tableData);
+window.tableData=tableData
+			var ctx = document.getElementById('myChart').getContext('2d');
+			currentCharts.forEach(function(cc){
+				cc.destroy();
+			})
+			var infectionsChart = new Chart(ctx, {
+				type: 'line',
+				data: {
+				labels: tableData.map(a=>a.dayStats.dayNumberInt),
+				datasets: [{
+					label: 'Infections',
+					backgroundColor: 'red',
+					borderColor: 'red',
+					data:  tableData.map(a=>a.dayStats.infectionsInt),
+					fill: false,
+				}]
+			},
+				options: {
+					scales: {
+						yAxes: [{
+							ticks: {
+								beginAtZero: true
+							}
+						}]
+					}
+				}
+			});
+			currentCharts=[myChart];
 		}
 
 		document.addEventListener('DOMContentLoaded', function() {			
@@ -211,7 +244,9 @@
 					<button type='submit' class="btn btn-primary">Run Simulation</button>
 				</div>
 			</form>
-			<div class='simulationOutput pt-3' id='simulationOutput' />
+			<canvas id="myChart" width="400" height="400"></canvas>
+
+			<div class='simulationOutput pt-3' id='simulationOutput' ></div>
 		</div>		
 	</div>
 </body>
