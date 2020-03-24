@@ -1,4 +1,4 @@
-var debugMode = false;
+var debugMode = true;
 
 var months = [ "Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec" ];
 var thousand = 1000;
@@ -15,6 +15,18 @@ function printDayShort(date) {
 function el(elementId) {
 	return document.getElementById(elementId);
 }
+
+function loadWebResource(docName, resultHandler) {
+	var xhttp = new XMLHttpRequest();
+	xhttp.onreadystatechange = function() {
+		if (this.readyState == 4 && this.status == 200) {
+			debug("loadWebResource loaded: " + docName);
+			resultHandler(this.responseText);
+		}
+	};
+	xhttp.open("GET", docName, true);
+	xhttp.send();
+}	
 
 function printNumberShort(number) {	
 	number = Math.floor(number);
@@ -79,7 +91,11 @@ function multiplyAndRound(numberInt, percentFloat) {
 	return flooredResult;
 }
 
-function getPercentage(currentValueInt, maxValueInt) {
+function getPercentage(currentValueInt, maxValueInt) {	
+	return Math.round(getPercentageFloat(currentValueInt, maxValueInt) * 100.0);
+}
+
+function getPercentageFloat(currentValueInt, maxValueInt) {
 	if (!isInteger(currentValueInt)) {
 		console.log("getPercentage error, currentValueInt is not an integer: " + currentValueInt);
 		console.trace();
@@ -90,9 +106,9 @@ function getPercentage(currentValueInt, maxValueInt) {
 		console.trace();
 		return null;
 	}
-	var result = ((currentValueInt * 1.0) / (maxValueInt * 1.0) * 100.0);
+	var result = (currentValueInt * 1.0) / (maxValueInt * 1.0);
 	// debug("Result of percentage, currentValueInt: " + currentValueInt + ", maxValueInt: " + maxValueInt + ", result: " + result);
-	return Math.round(result);
+	return result;
 }
 
 function incrementDate(date, dayCountInt) {
@@ -158,7 +174,7 @@ function populateTemplate(template, dayStats, totalStats, currentHospitalizedInt
 	value += printNumberShort(dayStats.positiveTestsInt) + " tested positive.";
 	templateCopy = templateCopy.replace("${testResultsToday}", value);
 
-	value = "" + printNumberShort(dayStats.hospitalizationsInt) + " of today's infections will be hospitalized, ";
+	value = "" + printNumberShort(dayStats.hospitalizationsInt) + " of today's infections need to be hospitalized, ";
 	value += printNumberShort(dayStats.deathsInt) + " will die.";
 	templateCopy = templateCopy.replace("${mortalityToday}", value);
 

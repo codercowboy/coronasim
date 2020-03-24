@@ -16,6 +16,7 @@
 	<script src="lib.js"></script>
 	<script src="classes.js"></script>
 	<script src="simulator.js"></script>
+	<script src="history.js"></script>
 	
 	<style>
 		* { font-size:3vmin; }
@@ -43,19 +44,13 @@
 		var templateHTML = null;
 		var currentCharts = [];
 
-		function loadTemplate(docName) {
-			var xhttp = new XMLHttpRequest();
-			xhttp.onreadystatechange = function() {
-				if (this.readyState == 4 && this.status == 200) {
-					console.log("loaded template: " + docName);
-					templateHTML = this.responseText;
-				}
-			};
-			xhttp.open("GET", docName, true);
-			xhttp.send();
-		}	
+		loadWebResource("results template.html", function(results) {
+			templateHTML = results;
+		});
 
-		loadTemplate("results template.html");
+		var dataManager = new CovidDataManager(function() {
+			console.log("US Data API Load complete.");
+		});
 
 		function runSimulation() {
 			debugMode = true;
@@ -146,9 +141,9 @@ window.tableData=tableData
 
 				<p>With the default settings, this simulator shows that if we continue our alarming rate of cases growing day over day, we'll have <strong>two million</strong> coronavirus patients requiring hospitalization one month from now. That's a big problem, because we only have <a href="https://www.cdc.gov/nchs/data/hus/2017/089.pdf">one million hospital beds in the United States</a> - total.</p>
 
-				<p>The current death rate from the virus appears to be 4% if you look at <a href="https://coronavirus.jhu.edu/map.html">current case total</a> to death ratio, or 10% if you look at survival to death ratio. 4% of two million patients with corona dying would be 80,000 deaths. BUT, if one million patients needing ventilators can't get into overcrowded hospitals, we might have 500,000 deaths or maybe even all 1,000,000, and as the simulator shows - it gets worse from there.</p>
+				<p>The current death rate from the virus appears to be 12% if you look at <a href="https://coronavirus.jhu.edu/map.html">current survival to death ratio</a>. 12% of two million patients with corona dying would be 240,000 deaths. BUT, if one million patients needing ventilators can't get into overcrowded hospitals, we might have 500,000 additional deaths or maybe even all 1,000,000, and as the simulator shows - it gets worse from there.</p>
 
-				<p>However, if we simply adjust our per-day infection growth rate down to 10% from the current trend of 25%+, we buy ourselves time. At a 10% growth rate, our hospital beds would not be exhausted until 3 months from now. If we <a href="https://www.npr.org/sections/health-shots/2020/03/17/817251610/its-time-to-get-serious-about-social-distancing-here-s-how">socially distance</a> ourselves, we will reduce the number of new cases and buy ourselves time.</p>
+				<p>However, if we simply adjust our per-day infection growth rate down to 10% from the current trend of 33%+, we buy ourselves time. At a 10% growth rate, our hospital beds would not be exhausted until 3 months from now. If we <a href="https://www.npr.org/sections/health-shots/2020/03/17/817251610/its-time-to-get-serious-about-social-distancing-here-s-how">socially distance</a> ourselves, we will reduce the number of new cases and buy ourselves time.</p>
 
 				<p><strong>We MUST take quarantine seriously.</strong> Now is not the time to refute the news and discard this as 'just the flu'. It is not the common flu. Coronavirus has a death rate <a href="https://www.livescience.com/new-coronavirus-compare-with-flu.html">at least ten times higher than the common flu</a>, and, if we can't <a href="https://www.nytimes.com/2020/03/11/science/coronavirus-curve-mitigation-infection.html">flatten the curve</a> and control the number of people needing hospitalization, many people will die who don't need to.</p>
 
@@ -158,7 +153,9 @@ window.tableData=tableData
 
 				<p>The default settings in the simulator are very crudely estimated right now, but that will be improved (with sources provided) soon.</p>
 
-				<p>For now, by default, we assume <a href="https://www.cdc.gov/nchs/data/hus/2017/089.pdf">1 million beds are available (per the CDC)</a> in United States hospitals right now. Other settings are currently configured for a very loose interpretation of today's (March 21) stats in the united states: about 25,000 confirmed cases, up 25% (~5,000) from yesterday; a death rate of about 4%, a (conservative?) estimate of 10% of confirmed cases resulting in hospitalization, and a very conservative estimate of hospitalizations lasting for 3 days.</p>
+				<p>For now, by default, we assume <a href="https://www.cdc.gov/nchs/data/hus/2017/089.pdf">1 million beds are available (per the CDC)</a> in United States hospitals right now. Other settings are currently configured for a very loose interpretation of today's (March 22) <a href="https://coronavirus.jhu.edu/map.html">stats</a> in the united states: about 33,000 confirmed cases, up 33% (~8,000) from yesterday; a death rate of about <a href="https://coronavirus.jhu.edu/map.html">12%</a>, a (conservative?) estimate of 10% of confirmed cases resulting in hospitalization, and a very conservative estimate of hospitalizations lasting for 3 days.</p>
+
+				<p>To clarify, using the tool, we are estimating that 10% of infections are being tested by default and 100% of those cases are resulting in hospitalization, which effectively is equivalent to 10% of the infections resulting in hospitalization.</p>
 
 				<p><strong>Note:</strong> This is a beta version of the simulator. All of the code is on <a href="https://github.com/codercowboy/coronasim">github</a>. Code review me, PLEASE! If you find a bug, please <a href="mailto:jason@onejasonforsale.com">email me</a>!</p>
 			</div>
@@ -176,18 +173,29 @@ window.tableData=tableData
 					</div>
 				</div>
 				<div class="form-row">
-					<div class="form-group col-md-6">
+					<div class="form-group col-md-8">
 						<label class="form-label">Initial Infections</label>
-						<input class="form-control-range" id="initialInfectionsSlider" type="range" min="10" max="100000" value="10" />
+						<input class="form-control-range" id="initialInfectionsSlider" type="range" min="10" max="999" value="33" scaleControl="initialInfectionsScale" />
 					</div>
-					<div class="form-group col-md-6">
+					<div class="form-group col-md-4">
+						<label class="form-label">Scale</label>
+						<select class='form-control' id="initialInfectionsScale" onchange="updateSliderLabel(el('initialInfectionsSlider'));">
+							<option>Exact</option>
+							<option selected="selected">Thousand</option>
+							<option>Million</option>
+							<option>Billion</option>
+						</select>
+					</div>
+				</div>
+				<div class="form-row">
+					<div class="form-group col-md-12">
 						<label class="form-label">Infection Rate Per Day</label>
-						<input class="form-control-range" id="newInfectionsPercentSlider" type="range" min="1" max="1000" value="250" format="percentage" />
+						<input class="form-control-range" id="newInfectionsPercentSlider" type="range" min="1" max="1000" value="330" format="percentage" />
 					</div>					
 				</div>
 				<div class="form-row">
 					<div class="form-group col-md-6">
-						<label class="form-label">Infections Tested</label>
+						<label class="form-label">New Infections Tested</label>
 						<input class="form-control-range" id="testPercentSlider" type="range" min="1" max="1000" value="100" format="percentage" />
 					</div>
 					<div class="form-group col-md-6">
@@ -198,7 +206,7 @@ window.tableData=tableData
 				<div class="form-row">
 					<div class="form-group col-md-6">
 						<label class="form-label">Positive Test Cases Resulting In Death</label>
-						<input class="form-control-range" id="caseDeathPercentSlider" type="range" min="1" max="1000" value="500" format="percentage" />
+						<input class="form-control-range" id="caseDeathPercentSlider" type="range" min="1" max="1000" value="120" format="percentage" />
 					</div>					
 					<div class="form-group col-md-6">
 						<label class="form-label">Positive Test Cases Resulting In Hospitalization</label>
@@ -219,6 +227,7 @@ window.tableData=tableData
 					<div class="form-group col-md-4">
 						<label class="form-label">Scale</label>
 						<select class='form-control' id="hospitalBedsScale" onchange="updateSliderLabel(el('hospitalBedsAvailableSlider'));">
+							<option>Exact</option>
 							<option>Thousand</option>
 							<option selected="selected">Million</option>
 							<option>Billion</option>
@@ -233,6 +242,7 @@ window.tableData=tableData
 					<div class="form-group col-md-4">
 						<label class="form-label">Scale</label>
 						<select class='form-control' id="populationCapScale" onchange="updateSliderLabel(el('populationCapSlider'));">
+							<option>Exact</option>
 							<option>Thousand</option>
 							<option  selected="selected">Million</option>
 							<option>Billion</option>

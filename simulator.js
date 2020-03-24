@@ -52,7 +52,6 @@ class CoronaSimulator {
 		}
 	}	
 
-	get initialDeathCount() { return this._initialDeathCount; }	
 	get currentDayStats() { return this._currentDayStats; }
 	get currentDayInt() { return this._currentDayInt; }
 	get currentDayDate() { return incrementDate(this._coronaSimSettings.initialDate, (this._currentDayInt - 1)); }
