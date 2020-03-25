@@ -1,7 +1,81 @@
 var stateNames = [{"name":"Alaska","state":"AK"},{"name":"Alabama","state":"AL"},{"name":"Arkansas","state":"AR"}, {"name":"American Samoa","state":"AS"},{"name":"Arizona","state":"AZ"},{"name":"California","state":"CA"}, {"name":"Colorado","state":"CO"},{"name":"Connecticut","state":"CT"},{"name":"District Of Columbia","state":"DC"}, {"name":"Delaware","state":"DE"},{"name":"Florida","state":"FL"},{"name":"Georgia","state":"GA"},{"name":"Guam","state":"GU"}, {"name":"Hawaii","state":"HI"},{"name":"Iowa","state":"IA"},{"name":"Idaho","state":"ID"},{"name":"Illinois","state":"IL"}, {"name":"Indiana","state":"IN"},{"name":"Kansas","state":"KS"},{"name":"Kentucky","state":"KY"},{"name":"Louisiana","state":"LA"}, {"name":"Massachusetts","state":"MA"},{"name":"Maryland","state":"MD"},{"name":"Maine","state":"ME"},{"name":"Michigan","state":"MI"}, {"name":"Minnesota","state":"MN"},{"name":"Missouri","state":"MO"},{"name":"Northern Mariana Islands","state":"MP"}, {"name":"Mississippi","state":"MS"},{"name":"Montana","state":"MT"},{"name":"North Carolina","state":"NC"},{"name":"North Dakota","state":"ND"}, {"name":"Nebraska","state":"NE"},{"name":"New Hampshire","state":"NH"},{"name":"New Jersey","state":"NJ"},{"name":"New Mexico","state":"NM"}, {"name":"Nevada","state":"NV"},{"name":"New York","state":"NY"},{"name":"Ohio","state":"OH"},{"name":"Oklahoma","state":"OK"}, {"name":"Oregon","state":"OR"},{"name":"Pennsylvania","state":"PA"},{"name":"Puerto Rico","state":"PR"},{"name":"Rhode Island","state":"RI"}, {"name":"South Carolina","state":"SC"},{"name":"South Dakota","state":"SD"},{"name":"Tennessee","state":"TN"},{"name":"Texas","state":"TX"}, {"name":"Utah","state":"UT"},{"name":"Virginia","state":"VA"},{"name":"Virgin Islands","state":"VI"},{"name":"Vermont","state":"VT"}, {"name":"Washington","state":"WA"},{"name":"Wisconsin","state":"WI"},{"name":"West Virginia","state":"WV"},{"name":"Wyoming","state":"WY"}];
 
-class CovidDataManager {
+class CovidRecordStats {
+	constructor() {
+		//counts
+		this.testResultsPositiveInt = 0;
+		this.testResultsNegativeInt = 0;
+		this.testResultsTotalInt = 0;
+		this.hospitalizedInt = 0;
+		this.deathsInt = 0;
+		
+		//percents		
+		this.testResultsPositivePercentFloat = 0;
+		this.testResultsNegativePercentFloat = 0;
+		this.hospitalizedOfTotalPercentFloat = 0;
+		this.hospitalizedOfPositivePercentFloat = 0;
+		this.deathsOfTotalPercentFloat = 0;
+		this.deathsOfPositivePercentFloat = 0;
+	}
 
+	initializePercentages() {
+		//percentages on original api data
+		this.testResultsPositivePercentFloat = getPercentageFloat(this.testResultsPositiveInt, this.testResultsTotalInt);
+		this.testResultsNegativePercentFloat = getPercentageFloat(this.testResultsNegativeInt, this.testResultsTotalInt);
+		this.hospitalizedOfTotalPercentFloat = getPercentageFloat(this.hospitalizedInt, this.testResultsTotalInt);
+		this.hospitalizedOfPositivePercentFloat = getPercentageFloat(this.hospitalizedInt, this.testResultsPositiveInt);
+		this.deathsOfTotalPercentFloat = getPercentageFloat(this.deathsInt, this.testResultsTotalInt);
+		this.deathsOfPositivePercentFloat = getPercentageFloat(this.deathsInt, this.testResultsPositiveInt);
+	}
+}
+
+class CovidRecordNewStats extends CovidRecordStats { //new stats compared to previous day
+	//latestStats is CovidRecordStats from current record
+	//previousStats is CovidRecordStats from last record
+	constructor(latestStats, previousStats) {
+		super();
+		
+		this.testResultsPositiveGrowthPercentFloat = 0;
+		this.testResultsNegativeGrowthPercentFloat = 0;
+		this.testResultsTotalGrowthPercentFloat = 0;
+		this.hospitalizedGrowthPercentFloat = 0;
+		this.deathGrowthPercentFloat = 0;
+		
+		if (latestStats != null && previousStats != null) {
+			this.testResultsPositiveInt = latestStats.testResultsPositiveInt - previousStats.testResultsPositiveInt;
+			this.testResultsNegativeInt = latestStats.testResultsNegativeInt - previousStats.testResultsNegativeInt;
+			this.testResultsTotalInt = latestStats.testResultsTotalInt - previousStats.testResultsTotalInt; 
+			this.hospitalizedInt = latestStats.hospitalizedInt - previousStats.hospitalizedInt; 
+			this.deathsInt = latestStats.deathsInt - previousStats.deathsInt; 
+		}
+	}
+
+	initializePercentages(previousStats) {
+		super.initializePercentages();
+
+		if (previousStats != null) {
+			this.testResultsPositiveGrowthPercentFloat = getPercentageFloat(this.testResultsPositiveInt, previousStats.testResultsPositiveInt);
+			this.testResultsNegativeGrowthPercentFloat = getPercentageFloat(this.testResultsNegativeInt, previousStats.testResultsNegativeInt);
+			this.testResultsTotalGrowthPercentFloat = getPercentageFloat(this.testResultsTotalInt, previousStats.testResultsTotalInt);
+			this.hospitalizedGrowthPercentFloat = getPercentageFloat(this.hospitalizedInt, previousStats.hospitalizedInt);
+			this.deathGrowthPercentFloat = getPercentageFloat(this.deathsInt, previousStats.deathsInt);
+		}
+	}
+}
+
+class CovidRecord {
+	constructor(id, index, date, datePretty, originalRecord) {
+		this.id = id;
+		this.index = index;
+		this.date = date;
+		this.datePretty = datePretty;
+		this.originalRecord = originalRecord;
+		this.stats = new CovidRecordStats();
+		this.newStats = new CovidRecordNewStats(null, null); //new stats compared to previous day
+	}
+}
+
+class CovidDataManager {
 	constructor(dataLoadedHandler) {		
 		var self = this;
 		var url = "https://covidtracking.com/api/us/daily";
@@ -38,84 +112,43 @@ class CovidDataManager {
 	}
 
 	parseData(results, dataDesc) {
-		var recordArray = [];
 		var idCounter = 0;
-
-		var lastRecordCopy = null;
-
+		var lastCovidRecord = null;
+		var covidRecordArray = []; //array of CovidRecord
 		for (var i = results.length - 1; i >= 0; i--) {
 
 			// original record from api: {"date":20200323,"states":56,"positive":42164,"negative":237321,"posNeg":279485,"pending":14571,"hospitalized":3325,"death":471,"total":294056}
-			var record = results[i];
+			var apiRecord = results[i];
 
-			//console.log("converting record for " + dataDesc, record);
+			//console.log("converting record for " + dataDesc, apiRecord);
 
-			var d = "" + record.date;
+			var d = "" + apiRecord.date;
 			var year = parseInt(d.substr(0,4));
 			var month = parseInt(d.substr(4,2));
 			var day = parseInt(d.substr(6,2));			
 			var date = new Date(year, month - 1, day, 0, 0, 0, 0);
 
-			// debug("Parsed from api date '" + record.date + " y:" + year + ", m: " + month + ", d: " + day + ", date:" + date);
+			// debug("Parsed from api date '" + apiRecord.date + " y:" + year + ", m: " + month + ", d: " + day + ", date:" + date);
 			
-			var recordCopy = new Object();
-			recordCopy.original = record;
-			recordCopy.date = date;
-			recordCopy.datePretty = printDayShort(date);
-			recordCopy.id = dataDesc + "-" + idCounter;
-			recordCopy.index = idCounter;
-			recordCopy.apiDate = record.date;
-			recordCopy.testResultsPositiveInt = this.denull(record.positive);
-			recordCopy.testResultsNegativeInt = this.denull(record.negative);
-			recordCopy.testResultsTotalInt = this.denull(record.positive) + this.denull(record.negative);
-			recordCopy.hospitalizedInt = this.denull(record.hospitalized);
-			recordCopy.deathsInt = this.denull(record.death);			
+			var covidRecord = new CovidRecord(dataDesc + "-" + idCounter, idCounter, date, printDayShort(date), apiRecord);
+			var stats = covidRecord.stats;
+			stats.testResultsPositiveInt = this.denull(apiRecord.positive);
+			stats.testResultsNegativeInt = this.denull(apiRecord.negative);
+			stats.testResultsTotalInt = this.denull(apiRecord.positive) + this.denull(apiRecord.negative);
+			stats.hospitalizedInt = this.denull(apiRecord.hospitalized);
+			stats.deathsInt = this.denull(apiRecord.death);			
+			stats.initializePercentages();
 
-			//percentages on original api data
-			recordCopy.testResultsPositivePercentFloat = getPercentageFloat(recordCopy.testResultsPositiveInt, recordCopy.testResultsTotalInt);
-			recordCopy.testResultsNegativePercentFloat = getPercentageFloat(recordCopy.testResultsNegativeInt, recordCopy.testResultsTotalInt);
-			recordCopy.hospitalizedOfTotalPercentFloat = getPercentageFloat(recordCopy.hospitalizedInt, recordCopy.testResultsTotalInt);
-			recordCopy.hospitalizedOfPositivePercentFloat = getPercentageFloat(recordCopy.hospitalizedInt, recordCopy.testResultsPositiveInt);
-			recordCopy.deathsOfTotalPercentFloat = getPercentageFloat(recordCopy.deathsInt, recordCopy.testResultsTotalInt);
-			recordCopy.deathsOfPositivePercentFloat = getPercentageFloat(recordCopy.deathsInt, recordCopy.testResultsPositiveInt);
+			var lastRecordStats = lastCovidRecord == null ? null : lastCovidRecord.stats;
+			covidRecord.newStats = new CovidRecordNewStats(stats, lastRecordStats);
+			covidRecord.newStats.initializePercentages(lastRecordStats);
 
-			//new stats compared to previous day
-			var newStats = new Object();
-			newStats.testResultsPositiveInt = lastRecordCopy == null ? recordCopy.testResultsPositiveInt
-				: recordCopy.testResultsPositiveInt - lastRecordCopy.testResultsPositiveInt;
-
-			newStats.testResultsNegativeInt = lastRecordCopy == null ? recordCopy.testResultsNegativeInt
-				: recordCopy.testResultsNegativeInt - lastRecordCopy.testResultsNegativeInt;
-
-			newStats.testResultsTotalInt = lastRecordCopy == null ? recordCopy.testResultsTotalInt
-				: recordCopy.testResultsTotalInt - lastRecordCopy.testResultsTotalInt; 
-
-			newStats.hospitalizedInt = lastRecordCopy == null ? recordCopy.hospitalizedInt
-				: recordCopy.hospitalizedInt - lastRecordCopy.hospitalizedInt; 
-
-			newStats.deathsInt = lastRecordCopy == null ? recordCopy.deathsInt
-				: recordCopy.deathsInt - lastRecordCopy.deathsInt; 
-
-			newStats.testResultsPositivePercentFloat = getPercentageFloat(newStats.testResultsPositiveInt, newStats.testResultsTotalInt);
-			newStats.testResultsNegativePercentFloat = getPercentageFloat(newStats.testResultsNegativeInt, newStats.testResultsTotalInt);
-			newStats.hospitalizedOfTotalPercentFloat = getPercentageFloat(newStats.hospitalizedInt, newStats.testResultsTotalInt);
-			newStats.hospitalizedOfPositivePercentFloat = getPercentageFloat(newStats.hospitalizedInt, newStats.testResultsPositiveInt);
-			newStats.deathsOfTotalPercentFloat = getPercentageFloat(newStats.deathsInt, newStats.testResultsTotalInt);
-			newStats.deathsOfPositivePercentFloat = getPercentageFloat(newStats.deathsInt, newStats.testResultsPositiveInt);
-
-			newStats.testResultsPositiveGrowthPercentFloat = getPercentageFloat(newStats.testResultsPositiveInt, recordCopy.testResultsPositiveInt);
-			newStats.testResultsNegativeGrowthPercentFloat = getPercentageFloat(newStats.testResultsNegativeInt, recordCopy.testResultsNegativeInt);
-			newStats.testResultsTotalGrowthPercentFloat = getPercentageFloat(newStats.testResultsTotalInt, recordCopy.testResultsTotalInt);
-			newStats.hospitalizedGrowthPercentFloat = getPercentageFloat(newStats.hospitalizedInt, recordCopy.hospitalizedInt);
-			newStats.deathGrowthPercentFloat = getPercentageFloat(newStats.deathsInt, recordCopy.deathsInt);
-
-			recordCopy.newStats = newStats;
-			recordArray.push(recordCopy);
+			covidRecordArray.push(covidRecord);
 
 			idCounter += 1;
-			lastRecordCopy = recordCopy;
+			lastCovidRecord = covidRecord;
 		}
-		return recordArray;		
+		return covidRecordArray;		
 	}
 
 	denull(x) {

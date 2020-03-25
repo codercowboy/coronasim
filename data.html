@@ -41,24 +41,26 @@
 	<script>		
 		var dataManager = null;
 
-		function createTableValue(record, propertyName) {
-			var totalCount = record[propertyName];
-			var newCount = record.newStats[propertyName];	
+		function createTableValue(covidRecord, propertyName) {
+			var totalCount = covidRecord.stats[propertyName];
+			var newCount = covidRecord.newStats[propertyName];
 
-			var value = "" + totalCount.toLocaleString();
-			value += "<div class='stats'>( + " + newCount.toLocaleString() + " / "
-			value += (getPercentageFloat(newCount, totalCount) * 100.0).toFixed(1);
+			var value = totalCount == null ? "" : "" + totalCount.toLocaleString();
+			if (newCount != null) {
+				var previousTotalCount = totalCount - newCount;	
+				value += "<div class='stats'>( + " + newCount.toLocaleString() + " / "
+				value += (getPercentageFloat(newCount, previousTotalCount) * 100.0).toFixed(1);
+			}
+			
 			return value + "% )</div>";
 		}
 
-		function addComparisonValue(record, propertyName, compareToPropertyName, compareToDesc) {
-			var totalCount = record[propertyName];
-			var compareToCount = record[compareToPropertyName];
-			var value = "<div class='stats'>( " + (getPercentageFloat(totalCount, compareToCount) * 100.0).toFixed(1) + "% " + compareToDesc + " )</div>";
+		function addComparisonValue(covidRecord, count, compareToCount, compareToDesc) {
+			var value = "<div class='stats'>( " + (getPercentageFloat(count, compareToCount) * 100.0).toFixed(1) + "% " + compareToDesc + " )</div>";
 			return value;
 		}
 
-		function createTable(data) {
+		function createTable(covidRecordArray) {
 			var tc = new TableCreator();
 			tc.cssClass = "table table-striped";
 
@@ -70,34 +72,34 @@
 			tc.addTableHeader("Deaths", "deaths");
 
 			var tableDataArray = [];
-			for (var i = data.length - 1; i >= 0; i--) {
-				var apiRecord = data[i];
+			for (var i = covidRecordArray.length - 1; i >= 0; i--) {
+				var covidRecord = covidRecordArray[i];
 				var d = new Object();
-				d.date = apiRecord.datePretty;
+				d.date = covidRecord.datePretty;
 
-				var newStats = apiRecord.newStats;
-				var value = "";
+				var stats = covidRecord.stats;
+				var newStats = covidRecord.newStats;
 
-				apiRecord.population = 330 * million;
-				apiRecord.bedCount = 1 * million;
+				var population = 330 * million;
+				var bedCount = 1 * million;
 
-				d.totalTested = createTableValue(apiRecord, "testResultsTotalInt");
-				d.totalTested += addComparisonValue(apiRecord, "testResultsTotalInt", "population", "of U.S population");
+				d.totalTested = createTableValue(covidRecord, "testResultsTotalInt");
+				d.totalTested += addComparisonValue(covidRecord, stats.testResultsTotalInt, population, "of U.S population");
 
-				d.positiveResults = createTableValue(apiRecord, "testResultsPositiveInt");
-				d.positiveResults += addComparisonValue(apiRecord, "testResultsPositiveInt", "testResultsTotalInt", "of total");
-				d.positiveResults += addComparisonValue(apiRecord, "testResultsPositiveInt", "population", "of U.S. population");
+				d.positiveResults = createTableValue(covidRecord, "testResultsPositiveInt");
+				d.positiveResults += addComparisonValue(covidRecord, stats.testResultsPositiveInt, stats.testResultsTotalInt, "of total");
+				d.positiveResults += addComparisonValue(covidRecord, stats.testResultsPositiveInt, "population", "of U.S. population");
 
-				d.negativeResults = createTableValue(apiRecord, "testResultsNegativeInt");
-				d.negativeResults += addComparisonValue(apiRecord, "testResultsNegativeInt", "testResultsTotalInt", "of total");
+				d.negativeResults = createTableValue(covidRecord, "testResultsNegativeInt");
+				d.negativeResults += addComparisonValue(covidRecord, stats.testResultsNegativeInt, stats.testResultsTotalInt, "of total");
 
-				d.hospitalized = createTableValue(apiRecord, "hospitalizedInt");
-				d.hospitalized += addComparisonValue(apiRecord, "hospitalizedInt", "testResultsPositiveInt", "of positive");
-				d.hospitalized += addComparisonValue(apiRecord, "hospitalizedInt", "bedCount", "of beds");
+				d.hospitalized = createTableValue(covidRecord, "hospitalizedInt");
+				d.hospitalized += addComparisonValue(covidRecord, stats.hospitalizedInt, stats.testResultsPositiveInt, "of positive");
+				d.hospitalized += addComparisonValue(covidRecord, stats.hospitalizedInt, bedCount, "of beds");
 
-				d.deaths = createTableValue(apiRecord, "deathsInt");
-				d.deaths += addComparisonValue(apiRecord, "deathsInt", "testResultsPositiveInt", "of positive");
-				d.deaths += addComparisonValue(apiRecord, "deathsInt", "hospitalizedInt", "of hospitalized");
+				d.deaths = createTableValue(covidRecord, "deathsInt");
+				d.deaths += addComparisonValue(covidRecord, stats.deathsInt, stats.testResultsPositiveInt, "of positive");
+				d.deaths += addComparisonValue(covidRecord, stats.deathsInt, stats.hospitalizedInt, "of hospitalized");
 
 				tableDataArray.push(d);
 			}
