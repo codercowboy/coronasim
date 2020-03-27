@@ -84,12 +84,17 @@ class CovidDataManager {
 			debug("Parsing U.S. data.");
 			self.unitedStatesDailyDataArray = self.parseData(JSON.parse(results), "usData");
 			debug("Finished parsing U.S. data.");
-			dataLoadedHandler(self);
+			if (self.unitedStatesDailyDataArray != null && self.statesDailyDataMap != null) {
+				dataLoadedHandler(self);
+			}
 		});
 		loadWebResource("https://covidtracking.com/api/states/daily", function(results) {
 			debug("Parsing State data.");
 			self.statesDailyDataMap = self.parseStateData(JSON.parse(results));
 			debug("Finished parsing State data.");
+			if (self.unitedStatesDailyDataArray != null && self.statesDailyDataMap != null) {
+				dataLoadedHandler(self);
+			}
 		});
 	}
 

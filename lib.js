@@ -18,6 +18,13 @@ function el(elementId) {
 	return document.getElementById(elementId);
 }
 
+function getQueryParameterFromURL(paramName) {
+	var url = new URL(window.location);	
+	var searchParams = new URLSearchParams(url.search);
+	console.log("url", searchParams.keys());
+	return searchParams.get(paramName);
+}
+
 function loadWebResource(docName, resultHandler) {
 	debug("loadWebResource loading: " + docName);
 	var xhttp = new XMLHttpRequest();

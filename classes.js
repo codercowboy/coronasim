@@ -2,45 +2,19 @@
 /* js class reference: https://www.w3schools.com/js/js_classes.asp */
 class CoronaSimSettings {
 
-	/*
-		fields: 
-		
-		coronaSimSettings.initialDate
-		coronaSimSettings.simulatonDaysInt
-		coronaSimSettings.initialInfectionsInt
-		coronaSimSettings.infectionDailyIncreasePercentFloat
-		coronaSimSettings.testPercentFloat
-		coronaSimSettings.positiveTestResultPercentFloat
-		coronaSimSettings.positiveCaseDeathPercentFloat
-		coronaSimSettings.positiveCaseHospitalizedPercentFloat
-		coronaSimSettings.daysHospitalizedInt
-		coronaSimSettings.hospitalBedsInt
-		coronaSimSettings.populationInt
-	*/
-
-	get initialDate() { return this._initialDate; }
-	get simulatonDaysInt() { return this._simulatonDaysInt; }
-	get initialInfectionsInt() { return this._initialInfectionsInt; }
-	get infectionDailyIncreasePercentFloat() { return this._infectionDailyIncreasePercentFloat; }
-	get testPercentFloat() { return this._testPercentFloat; }
-	get positiveTestResultPercentFloat() { return this._positiveTestResultPercentFloat; }
-	get positiveCaseDeathPercentFloat() { return this._positiveCaseDeathPercentFloat; }
-	get positiveCaseHospitalizedPercentFloat() { return this._positiveCaseHospitalizedPercentFloat; }
-	get daysHospitalizedInt() { return this._daysHospitalizedInt; }
-	get hospitalBedsInt() { return this._hospitalBedsInt; }
-	get populationInt() { return this._populationInt; }
-
-	set initialDate(x) { this._initialDate = x; }
-	set simulatonDaysInt(x) { this._simulatonDaysInt = x; }
-	set initialInfectionsInt(x) { this._initialInfectionsInt = x; }
-	set infectionDailyIncreasePercentFloat(x) { this._infectionDailyIncreasePercentFloat = (x * 1.0); }
-	set testPercentFloat(x) { this._testPercentFloat = (x * 1.0); }
-	set positiveTestResultPercentFloat(x) { this._positiveTestResultPercentFloat = (x * 1.0); }
-	set positiveCaseDeathPercentFloat(x) { this._positiveCaseDeathPercentFloat = (x * 1.0); }
-	set positiveCaseHospitalizedPercentFloat(x) { this._positiveCaseHospitalizedPercentFloat = (x * 1.0); }
-	set daysHospitalizedInt(x) { this._daysHospitalizedInt = x; }
-	set hospitalBedsInt(x) { this._hospitalBedsInt = x; }
-	set populationInt(x) { this._populationInt = x; }
+	constructor() {
+		this.initialDate = null;
+		this.simulatonDaysInt = 0;
+		this.initialInfectionsInt = 0;
+		this.infectionDailyIncreasePercentFloat = 0;
+		this.testPercentFloat = 0;
+		this.positiveTestResultPercentFloat = 0;
+		this.positiveCaseDeathPercentFloat = 0;
+		this.positiveCaseHospitalizedPercentFloat = 0;
+		this.daysHospitalizedInt = 0;
+		this.hospitalBedsInt = 0;
+		this.populationInt = 0;
+	}
 }
 
 class DayStats {
@@ -60,6 +34,7 @@ class DayStats {
 	constructor(dayNumberInt, totalInfectionCountSoFarInt, coronaSimSettings) {
 		debug("Creating daystats.", { dayNumberInt:dayNumberInt, totalInfectionCountSoFarInt:totalInfectionCountSoFarInt,
 			coronaSimSettings:coronaSimSettings });
+
 		this._dayNumberInt = dayNumberInt;
 		this._finalHospitalDayNumberInt = this._dayNumberInt + coronaSimSettings.daysHospitalizedInt;
 		if (dayNumberInt == 0) {
@@ -85,18 +60,6 @@ class DayStats {
 }
 
 class TotalStats {
-
-	/*
-		fields: 
-
-		totalStats.totalDays
-		totalStats.totalInfectionsInt
-		totalStats.totalTestedInt
-		totalStats.totalPositiveTestsInt
-		totalStats.totalHospitalizationsInt
-		totalStats.totalDeathsInt
-	*/	
-
 	constructor() {
 		this._totalDays = 0;
 		this._totalInfectionsInt = 0;

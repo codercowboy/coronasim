@@ -1,6 +1,6 @@
 <html>
 <head>
-	<title>Coronavirus (COVID-19) Statistics</title>
+	<title id='title'>U.S. Coronavirus Statistics</title>
 
 	<META name="description" content="Daily United States statitistics for the Coronavirus.">
 	<META name="keywords" content="Coronavirus, COVID-19, Flatten The Curve, Simulator">
@@ -88,7 +88,7 @@
 
 				d.positiveResults = createTableValue(covidRecord, "testResultsPositiveInt");
 				d.positiveResults += addComparisonValue(covidRecord, stats.testResultsPositiveInt, stats.testResultsTotalInt, "of total");
-				d.positiveResults += addComparisonValue(covidRecord, stats.testResultsPositiveInt, "population", "of U.S. population");
+				d.positiveResults += addComparisonValue(covidRecord, stats.testResultsPositiveInt, population, "of U.S. population");
 
 				d.negativeResults = createTableValue(covidRecord, "testResultsNegativeInt");
 				d.negativeResults += addComparisonValue(covidRecord, stats.testResultsNegativeInt, stats.testResultsTotalInt, "of total");
@@ -112,21 +112,29 @@
 			debug("Document loaded, loading data.");		
 			var handler = function(dataManager) {
 				debug("Remote data loaded. Creating table.");
-				createTable(dataManager.unitedStatesDailyDataArray);
+				changeTableForSelectedState();
 				debug("Finished creating table.");
 			};
 			dataManager = new CovidDataManager(handler);
 
 			//load up our selector
+			var selectedState = getQueryParameterFromURL("region");
+			console.log("URL selected state: " + selectedState);
 			el("modeSelector").options[el("modeSelector").options.length] = new Option("United States (All)", "United States (All)");
 			for (var stateName of dataManager.stateNames) {
  				el("modeSelector").options[el("modeSelector").options.length] = new Option(stateName, stateName);
+ 				if (selectedState == stateName) {
+ 					el("modeSelector").value = stateName;
+ 				}
  			}
+
 
 		}, false);
 
 		function changeTableForSelectedState() {
 			var selectedValue = el("modeSelector").value;
+			window.history.replaceState("state", "U.S. Coronavirus Statistics - " + selectedValue, "data.html?region=" + selectedValue);
+			el("title").innerHTML = "U.S. Coronavirus Statistics - " + selectedValue;
 			console.log("Showing data for: " + selectedValue);
 			var data = dataManager.unitedStatesDailyDataArray;
 			if (selectedValue != "United States (All)") {
@@ -151,7 +159,7 @@
 </head>
 <body>
 	<div class="container">
-		<h1>Coronavirus Stats</h1>
+		<h1>U.S. Coronavirus Statistics</h1>
 
 		<div class='section'>
 			<p>A summary of data pulled from <a href="https://covidtracking.com/data/">The Covid Tracking Project</a> with some interesting statistics.</p>
