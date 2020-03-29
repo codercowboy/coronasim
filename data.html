@@ -12,7 +12,7 @@
 	<link rel="stylesheet" href="inc/bootstrap-4.4.1/bootstrap.min.css">
 	
 	<script src="lib.js"></script>
-	<script src="history.js"></script>
+	<script src="stats.js"></script>
 	<script src="tablecreator.js"></script>
 	
 	<style>
@@ -105,46 +105,130 @@
 			}
 			tc.addData(tableDataArray);
 
-			el("simulationOutput").innerHTML = tc.createTable();
-		}		
+			el("dataTable").innerHTML = tc.createTable();
+		}	
+
+		function createCountyTable(covidRecordArray) {
+			var tc = new TableCreator();
+			tc.cssClass = "table table-striped";
+
+			tc.addTableHeader("Date", "date");
+			tc.addTableHeader("Positive Test Results", "positiveResults");
+			tc.addTableHeader("Deaths", "deaths");
+
+			var tableDataArray = [];
+			for (var i = covidRecordArray.length - 1; i >= 0; i--) {
+				var covidRecord = covidRecordArray[i];
+				console.log("Rendering table row for record.", { record:covidRecord });
+				var d = new Object();
+				d.date = covidRecord.datePretty;
+
+				var stats = covidRecord.stats;
+				var newStats = covidRecord.newStats;
+
+				d.positiveResults = createTableValue(covidRecord, "testResultsPositiveInt");
+
+				d.deaths = createTableValue(covidRecord, "deathsInt");
+				d.deaths += addComparisonValue(covidRecord, stats.deathsInt, stats.testResultsPositiveInt, "of positive");
+
+				tableDataArray.push(d);
+			}
+			tc.addData(tableDataArray);
+
+			el("dataTable").innerHTML = tc.createTable();
+		}	
+
+		function changeSelectorSelectedValue(selectorId, selectedValue) {
+			console.log("Change selector '" + selectorId +"' value to: " + selectedValue);
+			var selector = el(selectorId);
+			selector.value = selectedValue;
+		}	
 
 		document.addEventListener('DOMContentLoaded', function() {	
 			debug("Document loaded, loading data.");		
 			var handler = function(dataManager) {
 				debug("Remote data loaded. Creating table.");
+
+				var selectedState = getQueryParameterFromURL("region");
+				if (selectedState == "United States (All)") { //old user, we changed this to be "All States"
+					selectedState = "All States";
+				}
+				console.log("URL selected state: " + selectedState);
+				changeSelectorSelectedValue("stateSelector", selectedState);
+
+				updateViewFromSelectedState();
+
+				var selectedCounty = getQueryParameterFromURL("county");
+				console.log("URL selected state: " + selectedCounty);
+				changeSelectorSelectedValue("countySelector", selectedCounty);
+
 				changeTableForSelectedState();
 				debug("Finished creating table.");
 			};
 			dataManager = new CovidDataManager(handler);
 
 			//load up our selector
-			var selectedState = getQueryParameterFromURL("region");
-			console.log("URL selected state: " + selectedState);
-			el("modeSelector").options[el("modeSelector").options.length] = new Option("United States (All)", "United States (All)");
-			for (var stateName of dataManager.stateNames) {
- 				el("modeSelector").options[el("modeSelector").options.length] = new Option(stateName, stateName);
- 				if (selectedState == stateName) {
- 					el("modeSelector").value = stateName;
- 				}
- 			}
-
-
+			var selectValues = ["All States"];
+			for (var stateName of dataManager.stateNamesArray) {
+				selectValues.push(stateName);
+			}		
+			setSelectOptions("stateSelector", selectValues);	
+			
 		}, false);
 
-		function changeTableForSelectedState() {
-			var selectedValue = el("modeSelector").value;
-			window.history.replaceState("state", "U.S. Coronavirus Statistics - " + selectedValue, "data.html?region=" + selectedValue);
-			el("title").innerHTML = "U.S. Coronavirus Statistics - " + selectedValue;
-			console.log("Showing data for: " + selectedValue);
-			var data = dataManager.unitedStatesDailyDataArray;
-			if (selectedValue != "United States (All)") {
-				data = dataManager.stateDailyDataArray(selectedValue);
-				if (data == null) {
-					console.log("Error: can't find data for state: " + selectedValue);
-					return;
-				}	
+		function setSelectOptions(selectorId, optionStringsArray) {
+			var selector = el(selectorId);
+			while (selector.options.length > 0) {
+				selector.remove(0);
 			}
-			createTable(data);
+			console.log("selector", {o:selector});
+			if (optionStringsArray == null || optionStringsArray.length == 0) {
+				selector.enabled = false;
+				return;
+			}
+			selector.enabled = true;
+			for (var value of optionStringsArray) {
+ 				selector.add(new Option(value, value));
+ 			}
+ 			selector.value = optionStringsArray[0];
+		}
+
+		function updateViewFromSelectedState() {
+			var selectedState = el("stateSelector").value;
+			var countiesForState = ["All Counties"];
+			for (var county of dataManager.getCountiesForStateName(selectedState)) {
+				countiesForState.push(county);
+			}
+			setSelectOptions("countySelector", countiesForState);
+		}
+
+		function changeTableForSelectedState() {
+			var selectedState = el("stateSelector").value;
+			var selectedCounty = el("countySelector").value;
+			updateUrl();
+			console.log("Showing data for: " + selectedState + " - " + selectedCounty);
+			if (selectedCounty == "All Counties") {
+				var data = dataManager.unitedStatesDailyDataArray;
+				if (selectedState != "All States") {
+					data = dataManager.getDailyStateDataForStateName(selectedState);
+					if (data == null) {
+						console.log("Error: can't find data for state: " + selectedValue);
+						return;
+					}	
+				}
+				createTable(data);
+			} else {
+				var data = dataManager.getNYTCountyDataForStateCounty(selectedState, selectedCounty);
+				createCountyTable(data);
+			}
+		}
+
+		function updateUrl() {
+			var selectedState = el("stateSelector").value;
+			var selectedCounty = el("countySelector").value;
+			var title = "U.S. Coronavirus Statistics - " + selectedState + " - " + selectedCounty;
+			window.history.replaceState("state", title, "data.html?region=" + selectedState + "&county=" + selectedCounty);
+			el("title").innerHTML = title;
 		}
 	</script>
 
@@ -170,14 +254,21 @@
 		</div>
 
 		<div class='form-row'>
-			<div class='form-group col-md-4'></div>
 			<div class='form-group col-md-4'>
-				<label class='form-label'>Showing Data For</label>
-				<select class='form-control' id='modeSelector' onChange='changeTableForSelectedState()'></select>
+				<label class='form-label'>State</label>
+				<select class='form-control' id='stateSelector' onChange='updateViewFromSelectedState()'></select>
+			</div>
+			<div class='form-group col-md-4'>
+				<label class='form-label'>County</label>
+				<select class='form-control' id='countySelector' onchange="updateUrl()"></select>
+			</div>
+			<div class='form-group col-md-2'>
+				<label class='form-label'>&nbsp;</label>
+				<button class='btn btn-primary form-control' onClick='changeTableForSelectedState()'>View Data</button>
 			</div>
 		</div>
 
-		<div class='simulationOutput pt-3' id='simulationOutput'>
+		<div class='simulationOutput pt-3' id='dataTable'>
 			<div class='spinnerHolder'><div class="spinner-border text-primary" role="status"></div></div>
 		</div>
 	</div>		
