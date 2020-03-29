@@ -163,6 +163,9 @@
 				changeSelectorSelectedValue("countySelector", selectedCounty);
 
 				changeTableForSelectedState();
+
+				var hospitalStates = dataManager.statesWithHospitalizationInfo;
+				el("hospitalInfo").innerHTML = "" + hospitalStates.length + " states";
 				debug("Finished creating table.");
 			};
 			dataManager = new CovidDataManager(handler);
@@ -216,9 +219,11 @@
 						return;
 					}	
 				}
+				console.log("Data for table.", data)
 				createTable(data);
 			} else {
 				var data = dataManager.getNYTCountyDataForStateCounty(selectedState, selectedCounty);
+				console.log("Data for table.", data)
 				createCountyTable(data);
 			}
 		}
@@ -246,9 +251,9 @@
 		<h1>U.S. Coronavirus Statistics</h1>
 
 		<div class='section'>
-			<p>A summary of data pulled from <a href="https://covidtracking.com/data/">The Covid Tracking Project</a> with some interesting statistics.</p>
+			<p>Country and state-level stats are from the <a href="https://covidtracking.com/data/">Covid Tracking Project</a>. County-level statistics are from the <a href="https://github.com/nytimes/covid-19-data">New York Times covid-19-data</a> data set.</p>
 
-			<p><strong>Note:</strong> Best viewed in landscape mode on a smartphone.</p>
+			<p><strong>Note:</strong> Hospitalization data should be considered the lower bound for total hospitalizations. State-level hospitalization data is currently only available for <span id='hospitalInfo'>0 states</span>.
 		
 			<p><strong>Note:</strong> This is a beta version. All of the code is on <a href="https://github.com/codercowboy/coronasim">github</a>. Code review me, PLEASE! If you find a bug, please <a href="mailto:jason@onejasonforsale.com">email me</a>!</p>
 		</div>

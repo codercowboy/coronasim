@@ -24,12 +24,20 @@ class CovidRecordStats {
 
 	initializePercentages() {
 		//percentages on original api data
-		this.testResultsPositivePercentFloat = getPercentageFloat(this.testResultsPositiveInt, this.testResultsTotalInt);
-		this.testResultsNegativePercentFloat = getPercentageFloat(this.testResultsNegativeInt, this.testResultsTotalInt);
-		this.hospitalizedOfTotalPercentFloat = getPercentageFloat(this.hospitalizedInt, this.testResultsTotalInt);
-		this.hospitalizedOfPositivePercentFloat = getPercentageFloat(this.hospitalizedInt, this.testResultsPositiveInt);
-		this.deathsOfTotalPercentFloat = getPercentageFloat(this.deathsInt, this.testResultsTotalInt);
-		this.deathsOfPositivePercentFloat = getPercentageFloat(this.deathsInt, this.testResultsPositiveInt);
+		this.calculatPercentage("testResultsPositivePercentFloat", "testResultsPositiveInt", "testResultsTotalInt");
+		this.calculatPercentage("testResultsNegativePercentFloat", "testResultsNegativeInt", "testResultsTotalInt");
+		this.calculatPercentage("hospitalizedOfTotalPercentFloat", "hospitalizedInt", "testResultsTotalInt");
+		this.calculatPercentage("hospitalizedOfPositivePercentFloat", "hospitalizedInt", "testResultsPositiveInt");
+		this.calculatPercentage("deathsOfTotalPercentFloat", "deathsInt", "testResultsTotalInt");
+		this.calculatPercentage("deathsOfPositivePercentFloat", "deathsInt", "testResultsPositiveInt");
+	}
+
+	calculatPercentage(targetPropertyName, countPropertyName, maxPropertyName) {
+		var count = this[countPropertyName];
+		var max = this[maxPropertyName];
+		if (count != null && max != null) {
+			this[targetPropertyName] = getPercentageFloat(count, max);
+		}
 	}
 }
 
@@ -46,11 +54,19 @@ class CovidRecordNewStats extends CovidRecordStats { //new stats compared to pre
 		this.deathGrowthPercentFloat = 0;
 		
 		if (latestStats != null && previousStats != null) {
-			this.testResultsPositiveInt = latestStats.testResultsPositiveInt - previousStats.testResultsPositiveInt;
-			this.testResultsNegativeInt = latestStats.testResultsNegativeInt - previousStats.testResultsNegativeInt;
-			this.testResultsTotalInt = latestStats.testResultsTotalInt - previousStats.testResultsTotalInt; 
-			this.hospitalizedInt = latestStats.hospitalizedInt - previousStats.hospitalizedInt; 
-			this.deathsInt = latestStats.deathsInt - previousStats.deathsInt; 
+			this.calculateNewStat(latestStats, previousStats, "testResultsPositiveInt");
+			this.calculateNewStat(latestStats, previousStats, "testResultsNegativeInt");
+			this.calculateNewStat(latestStats, previousStats, "testResultsTotalInt");
+			this.calculateNewStat(latestStats, previousStats, "hospitalizedInt");
+			this.calculateNewStat(latestStats, previousStats, "deathsInt");
+		}
+	}
+
+	calculateNewStat(latestStats, previousStats, propertyName) {
+		var latestCount = latestStats[propertyName];
+		var previousCount = previousStats[propertyName];
+		if (latestCount != null && previousCount != null) {
+			this[propertyName] = latestCount - previousCount;
 		}
 	}
 
@@ -58,11 +74,19 @@ class CovidRecordNewStats extends CovidRecordStats { //new stats compared to pre
 		super.initializePercentages();
 
 		if (previousStats != null) {
-			this.testResultsPositiveGrowthPercentFloat = getPercentageFloat(this.testResultsPositiveInt, previousStats.testResultsPositiveInt);
-			this.testResultsNegativeGrowthPercentFloat = getPercentageFloat(this.testResultsNegativeInt, previousStats.testResultsNegativeInt);
-			this.testResultsTotalGrowthPercentFloat = getPercentageFloat(this.testResultsTotalInt, previousStats.testResultsTotalInt);
-			this.hospitalizedGrowthPercentFloat = getPercentageFloat(this.hospitalizedInt, previousStats.hospitalizedInt);
-			this.deathGrowthPercentFloat = getPercentageFloat(this.deathsInt, previousStats.deathsInt);
+			this.calculateGrowth(previousStats, "testResultsPositiveInt", "testResultsPositiveGrowthPercentFloat");
+			this.calculateGrowth(previousStats, "testResultsNegativeInt", "testResultsNegativeGrowthPercentFloat");
+			this.calculateGrowth(previousStats, "testResultsTotalInt", "testResultsTotalGrowthPercentFloat");
+			this.calculateGrowth(previousStats, "hospitalizedInt", "hospitalizedGrowthPercentFloat");
+			this.calculateGrowth(previousStats, "deathsInt", "deathGrowthPercentFloat");
+		}
+	}
+
+	calculateGrowth(previousStats, propertyName, targetPropertyName) {
+		var latestCount = this[propertyName];
+		var previousCount = previousStats[propertyName];
+		if (latestCount != null && previousCount != null) {
+			this[targetPropertyName] = getPercentageFloat(latestCount, previousCount);
 		}
 	}
 }
@@ -73,6 +97,7 @@ class CovidRecord {
 		this.index = index;
 		this.date = date;
 		this.datePretty = datePretty;
+		this.dateSortable = "" + date.getUTCFullYear() + "" + date.getUTCMonth() + "" + date.getUTCDate();
 		this.originalRecord = originalRecord;
 		this.stats = new CovidRecordStats();
 		this.newStats = new CovidRecordNewStats(null, null); //new stats compared to previous day
@@ -85,6 +110,7 @@ class CovidDataManager {
 		this.unitedStatesDailyDataArray	= null;
 		this.statesDailyDataMapByStateName = null;
 		this.countyDailyDataMapByStateName = null;
+		this.statesWithHospitalizationInfo = [];
 
 		var self = this;
 
@@ -172,6 +198,44 @@ class CovidDataManager {
 			covidRecordMapByStateName[key].push(covidRecord);
 			idCounter += 1;
 		}
+
+		//populate county new stats from day to day
+		for (var stateInfo of stateInfos) {
+			var stateRecords = covidRecordMapByStateName[stateInfo.name];
+			// console.log("Populating NYT new stats for state: " + stateInfo.name, stateRecords);
+			if (stateRecords == null) {
+				console.log("WARNING: no county information found for state: " + stateInfo.name);
+				continue;
+			}
+			var countyNames = [];
+			var stateRecordsMapByCounty = [];
+			for (var covidRecord of stateRecords) {
+				var countyName = covidRecord.county;
+				if (!countyNames.includes(countyName)) {
+					countyNames.push(countyName);
+				}
+				if (stateRecordsMapByCounty[countyName] == null) {
+					stateRecordsMapByCounty[countyName] = [];
+				}
+				stateRecordsMapByCounty[countyName].push(covidRecord);
+			}
+			countyNames.sort();
+			// console.log("Finished sorting state data by county: " + stateInfo.name, { map:stateRecordsMapByCounty, counties:countyNames });
+			var newStateRecords = [];
+			for (var countyName of countyNames) {
+				var recordsForCounty = stateRecordsMapByCounty[countyName];
+				this.sortCovidRecordsByDate(recordsForCounty);
+				this.populateNewStats(recordsForCounty)		
+				for (var covidRecord of recordsForCounty) {
+					newStateRecords.push(covidRecord);
+				}
+			}			
+			covidRecordMapByStateName[stateInfo.name] = newStateRecords;
+			// console.log("Finished populating new stats for state data by county: " + stateInfo.name, newStateRecords);
+		}
+
+		// console.log("Finished parsing NYT data.", covidRecordMapByStateName);
+
 		return covidRecordMapByStateName;
 	}
 
@@ -221,14 +285,21 @@ class CovidDataManager {
 				record.stateInfo = stateInfo;
 			}
 			result[stateInfo.name] = this.parseCTPData(records, stateInfo.name + "Data");
+			for (var record of result[stateInfo.name]) {
+				if (record.stats.hospitalizedInt > 0) {
+					console.log("State has hospitalization info: " + stateInfo.name, record);
+					this.statesWithHospitalizationInfo.push(stateInfo.name);
+					break;
+				}
+			}
 		}
+		this.statesWithHospitalizationInfo.sort();
 		return result;
 	}
 
 	// parse data from Covid Tracking Project
 	parseCTPData(results, dataDesc) {
 		var idCounter = 0;
-		var lastCovidRecord = null;
 		var covidRecordArray = []; //array of CovidRecord
 		for (var i = results.length - 1; i >= 0; i--) {
 
@@ -253,17 +324,30 @@ class CovidDataManager {
 			stats.hospitalizedInt = this.denull(apiRecord.hospitalized);
 			stats.deathsInt = this.denull(apiRecord.death);			
 			stats.initializePercentages();
-
-			var lastRecordStats = lastCovidRecord == null ? null : lastCovidRecord.stats;
-			covidRecord.newStats = new CovidRecordNewStats(stats, lastRecordStats);
-			covidRecord.newStats.initializePercentages(lastRecordStats);
-
+			
 			covidRecordArray.push(covidRecord);
+			idCounter += 1;			
+		}
+		this.sortCovidRecordsByDate(covidRecordArray);
+		this.populateNewStats(covidRecordArray)		
+		return covidRecordArray;		
+	}
 
-			idCounter += 1;
+	populateNewStats(recordArray) {
+		var arrayCopy = recordArray.slice();
+		this.sortCovidRecordsByDate(arrayCopy);
+		var lastCovidRecord = null;
+		for (var covidRecord of arrayCopy) {
+			var lastRecordStats = lastCovidRecord == null ? null : lastCovidRecord.stats;
+			covidRecord.newStats = new CovidRecordNewStats(covidRecord.stats, lastRecordStats);
+			covidRecord.newStats.initializePercentages(lastRecordStats);
 			lastCovidRecord = covidRecord;
 		}
-		return covidRecordArray;		
+	} 
+
+
+	sortCovidRecordsByDate(recordArray) {
+		recordArray.sort((a, b) => (a.dateSortable.localeCompare(b.dateSortable)) ? 1 : -1);
 	}
 
 	denull(x) {
