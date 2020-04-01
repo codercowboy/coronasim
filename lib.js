@@ -9,6 +9,9 @@ var billion = million * 1000;
 var trillion = billion * 1000;
 
 function printDayShort(date) {
+	if (date == null) {
+		return null;
+	}
 	var result = months[date.getUTCMonth()] + " " + date.getUTCDate() + " " + (date.getUTCFullYear());
 	// debug("printDayShort: " + date + " -> " + result, null);
 	return result;
@@ -21,7 +24,6 @@ function el(elementId) {
 function getQueryParameterFromURL(paramName) {
 	var url = new URL(window.location);	
 	var searchParams = new URLSearchParams(url.search);
-	console.log("url", searchParams.keys());
 	return searchParams.get(paramName);
 }
 
@@ -85,12 +87,12 @@ function isFloat(x) {
 /* numberInt = 100, percentFloat = 25.0 (ie 25%), answer = 25 */
 function multiplyAndRound(numberInt, percentFloat) {
 	if (!isInteger(numberInt)) {
-		console.log("multiplyAndRound error, numberInt is not an integer: " + numberInt);
+		debug("multiplyAndRound error, numberInt is not an integer: " + numberInt);
 		console.trace();
 		return null;
 	}
 	if (!isFloat(percentFloat) && !isInteger(percentFloat)) {
-		console.log("multiplyAndRound error, percentFloat is not a float or integer: " + percentFloat);
+		debug("multiplyAndRound error, percentFloat is not a float or integer: " + percentFloat);
 		console.trace();
 		return null;
 	}
@@ -107,12 +109,12 @@ function getPercentage(currentValueInt, maxValueInt) {
 
 function getPercentageFloat(currentValueInt, maxValueInt) {
 	if (!isInteger(currentValueInt)) {
-		console.log("getPercentage error, currentValueInt is not an integer: " + currentValueInt);
+		debug("getPercentage error, currentValueInt is not an integer: " + currentValueInt);
 		console.trace();
 		return null;
 	}
 	if (!isInteger(maxValueInt)) {
-		console.log("getPercentage error, maxValueInt is not an integer: " + maxValueInt);
+		debug("getPercentage error, maxValueInt is not an integer: " + maxValueInt);
 		console.trace();
 		return null;
 	}
@@ -231,7 +233,7 @@ function generateSimulationOutput(template, coronaSimSettings) {
 		});
 		var totalInfections = simulator.totalStats.totalInfectionsInt;
 		if (totalInfections > coronaSimSettings.populationInt) {
-			console.log("stopping simulation, hit population limit: " + totalInfections.toLocaleString());
+			debug("stopping simulation, hit population limit: " + totalInfections.toLocaleString());
 			break;
 		}
 	}
@@ -242,4 +244,32 @@ function generateSimulationOutput(template, coronaSimSettings) {
 	}		
 	html += "\n</div>";
 	return html;
+}
+
+function setSelectOptions(selectorId, optionStringsArray) {
+	var selector = el(selectorId);
+	while (selector.options.length > 0) {
+		selector.remove(0);
+	}
+	if (optionStringsArray == null || optionStringsArray.length == 0) {
+		selector.enabled = false;
+		return;
+	}
+	selector.enabled = true;
+	for (var value of optionStringsArray) {
+		selector.add(new Option(value, value));
+	}
+	selector.value = optionStringsArray[0];
+}
+
+function changeSelectSelectedValue(selectorId, selectedValue) {
+	debug("Change select '" + selectorId +"' selected value to: " + selectedValue);
+	if (selectedValue == null) {
+		return;
+	}
+	el(selectorId).value = selectedValue;
+}	
+
+function denull(x) {
+	return x == null ? 0 : x;
 }
