@@ -273,3 +273,26 @@ function changeSelectSelectedValue(selectorId, selectedValue) {
 function denull(x) {
 	return x == null ? 0 : x;
 }
+
+function hideElement(elementId) {
+	var element = el(elementId)
+	if (element == null) {
+		return;
+	}
+	if (element.ccOldDisplayStyle == null) {
+		element.ccOldDisplayStyle = element.style.display;
+	}
+	element.style.display = "none";
+}
+
+function showElement(elementId, displayStyle) {
+	var element = el(elementId)
+	if (element == null) {
+		return;
+	}
+	if (displayStyle == null && element.ccOldDisplayStyle != null) {
+		displayStyle = element.ccOldDisplayStyle;
+	}
+	displayStyle == (displayStyle == null) ? "block" : displayStyle;
+	element.style.display = displayStyle;
+}

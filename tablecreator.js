@@ -74,19 +74,20 @@ class TableHeader {
 class TableCreator {	
 	
 	constructor() {
-		this._headerHTML = "";
-		this._dataHTML = "";
-		this._tableHeaders = [];
+		this.headerHTML = "";
+		this.dataHTML = "";
+		this.tableHeaders = [];
+		this.cssClass = "";
+		this.data = [];
 	}
 
 	createTable() {
-
 		var html = "";
-		html += "<table id='theTable' class='" + this._cssClass + "'><thead>\n";
+		html += "<table id='theTable' class='" + this.cssClass + "'><thead>\n";
 		//add headers
-		html += this._headerHTML;
+		html += this.headerHTML;
 		html += "</thead><tbody>\n";
-		html += this._dataHTML;
+		html += this.renderData();
 		html += "</tbody></table>\n"
 		return html;
 	}
@@ -101,16 +102,19 @@ class TableCreator {
 		header.columnName = columnName;
 		header.propertyName = propertyName;
 		header.columnFormat = columnFormat;
-		this._tableHeaders.push(header);
-		this._headerHTML += "<th onclick=\"sortTable(" + this._tableHeaders.length + ", 'theTable')\">" + columnName + "</th>\n";
+		this.tableHeaders.push(header);
+		this.headerHTML += "<th onclick=\"sortTable(" + this.tableHeaders.length + ", 'theTable')\">" + columnName + "</th>\n";
 		return header;
 	}
 
-	addData(dataArray) {
+	renderData() {
+		if (this.data == null) {
+			return "";
+		}
 		var html = "";
-		for (var record of dataArray) {
+		for (var record of this.data) {
 			html += "<tr>";
-			for (var header of this._tableHeaders) {
+			for (var header of this.tableHeaders) {
 				var value = record[header.propertyName];
 				if (value == null) {
 					value = "";
@@ -125,9 +129,6 @@ class TableCreator {
 			}
 			html += "</tr>\n";
 		}
-		this._dataHTML += html;
+		return html
 	}
-
-	get cssClass() { return this._cssClass; }
-	set cssClass(x) { this._cssClass = x; }
 }
