@@ -36,13 +36,18 @@
 		.testResult { padding:0.50rem 1rem; border-left:1px solid rgba(0,0,0,0.15); border-top:1px solid rgba(0,0,0,0.15); margin-bottom:2rem; }
 		.spinnerHolder { width:100%; text-align:center; margin-top:3rem; }
 		.table TD .stats { font-size:x-small; color:gray; display:block; padding-top:0.25rem; }
+		TH:hover { cursor:s-resize; }
 	</style>
 
 	<script>		
 		var dataManager = null;
+		var statTableCreator = null;
 
 		document.addEventListener('DOMContentLoaded', function() {	
-			debug("Document loaded, loading data.");		
+			debug("Document loaded, loading data.");	
+
+			statTableCreator = new TableCreator("statsTableCreator", el("dataTable"));	
+
 			var handler = function(dataManager) {
 				debug("Remote data loaded. Creating table.");
 
@@ -103,9 +108,9 @@
 			var selectedState = el("stateSelector").value;
 			var selectedCounty = el("countySelector").value;
 			var selectedMode = el("modeSelector").value;
-			var tableMaker = new CovidTableMaker(dataManager, selectedState, selectedCounty, selectedMode);
 			debug("Showing data for: " + selectedState + " - " + selectedCounty + " (" + selectedMode + ")");
-			el("dataTable").innerHTML = tableMaker.createTable();
+			var tableMaker = new CovidTableMaker(dataManager, selectedState, selectedCounty, selectedMode, statTableCreator);
+			tableMaker.createTable();
 		}
 
 		function updateUrl() {
@@ -154,8 +159,8 @@
 			<div class='form-group col-md-2'>
 				<label class='form-label'>Mode</label>
 				<select class='form-control' id='modeSelector' onChange='updateViewFromSelectedMode(); changeTableForSelectedState();'>
-					<option>History</option>
 					<option>Current</option>
+					<option>History</option>
 				</select>
 			</div>
 		</div>

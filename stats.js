@@ -517,38 +517,39 @@ class CovidDataManager {
 }
 
 class CovidTableMaker {
-	constructor(covidDataManager, selectedState, selectedCounty, selectedMode) {
+	constructor(covidDataManager, selectedState, selectedCounty, selectedMode, tableCreator) {
 		this.dataManager = covidDataManager;
 		this.selectedState = selectedState;
 		this.selectedCounty = selectedCounty;
 		this.selectedMode = selectedMode;
+		this.tableCreator = tableCreator;
 	}
 
 	createTable() {
-		var tc = new TableCreator();
-		tc.cssClass = "table table-striped";		
+		this.tableCreator.reset();
+		this.tableCreator.cssClass = "table table-striped";		
 		if ("Current" == this.selectedMode) {
 			if ("All States" == this.selectedState) {
-				tc.addTableHeader("State", "stateName");
-				tc.data = this.createCountryCurrenTable();
+				this.tableCreator.addTableHeader("State", "stateName", null, "stateName").sortAscending = true;
+				this.createCountryCurrenTable();
 			} else {
-				tc.addTableHeader("County", "countyName");
-				tc.data = this.createStateCurrentTable();
+				this.tableCreator.addTableHeader("County", "countyName", null, "countyName").sortAscending = true;
+				this.createStateCurrentTable();
 			}
 		} else { //history mode
-			tc.addTableHeader("Date", "date");
+			this.tableCreator.addTableHeader("Date", "date", null, "date");
 			if (this.selectedCounty == "All Counties") {
-				tc.data = this.createStateHistoryTable();
+				this.createStateHistoryTable();
 			} else {
-				tc.data = this.createCountyHistoryTable();				
+				this.createCountyHistoryTable();				
 			}
 		}
-		tc.addTableHeader("Tested", "totalTested");
-		tc.addTableHeader("Positive Test Results", "positiveResults");
-		tc.addTableHeader("Negative Test Results", "negativeResults");
-		tc.addTableHeader("Hospitalized", "hospitalized");
-		tc.addTableHeader("Deaths", "deaths");
-		return tc.createTable();
+		this.tableCreator.addTableHeader("Tested", "totalTested", null, "testedInt");
+		this.tableCreator.addTableHeader("Positive Test Results", "positiveResults", null, "positiveResultsInt");
+		this.tableCreator.addTableHeader("Negative Test Results", "negativeResults", null, "negativeResultsInt");
+		this.tableCreator.addTableHeader("Hospitalized", "hospitalized", null, "hospitalizedInt");
+		this.tableCreator.addTableHeader("Deaths", "deaths", null, "deathsInt");
+		this.tableCreator.createTable();
 	}
 
 	createStateHistoryTable() {
@@ -566,7 +567,7 @@ class CovidTableMaker {
 		for (var i = covidRecordArray.length - 1; i >= 0; i--) {
 			tableDataArray.push(this.createStateTableData(covidRecordArray[i]));
 		}
-		return tableDataArray;
+		this.tableCreator.data = tableDataArray;
 	}		
 
 	createCountyHistoryTable() {
@@ -580,7 +581,7 @@ class CovidTableMaker {
 		for (var i = covidRecordArray.length - 1; i >= 0; i--) {
 			tableDataArray.push(this.createCountyTableData(covidRecordArray[i]));
 		}
-		return tableDataArray;
+		this.tableCreator.data = tableDataArray;
 	}
 
 	createCountryCurrenTable() {
@@ -589,13 +590,13 @@ class CovidTableMaker {
 
 		debug("Rendering current country table.", { countryRecord:countryRecord, stateRecords:stateRecords });
 
+		this.tableCreator.topUnsortableRows.push(this.createStateTableData(countryRecord));
+		this.tableCreator.topUnsortableRows[0].stateName = "All States";
 		var tableDataArray = [];
-		tableDataArray.push(this.createStateTableData(countryRecord));
-		tableDataArray[0].stateName = "All States";
 		for (var stateRecord of stateRecords) {
 			tableDataArray.push(this.createStateTableData(stateRecord));
 		}
-		return tableDataArray;
+		this.tableCreator.data = tableDataArray;
 	}
 
 	createStateCurrentTable() {
@@ -608,13 +609,13 @@ class CovidTableMaker {
 		var stateRecord = this.dataManager.getStateRecordForDate(this.selectedState, latestCountyRecord.date);
 		var countyRecords = this.dataManager.getCountyRecordsForDate(this.selectedState, latestCountyRecord.date);
 
+		this.tableCreator.topUnsortableRows.push(this.createStateTableData(stateRecord));
+		this.tableCreator.topUnsortableRows[0].countyName = "All Counties";
 		var tableDataArray = [];
-		tableDataArray.push(this.createStateTableData(stateRecord));
-		tableDataArray[0].countyName = "All Counties";
 		for (var countyRecord of countyRecords) {
 			tableDataArray.push(this.createCountyTableData(countyRecord));
 		}		
-		return tableDataArray;
+		this.tableCreator.data = tableDataArray;
 	}
 
 	createStateTableData(covidRecord) {
@@ -622,7 +623,6 @@ class CovidTableMaker {
 		if (countryRecord == covidRecord) {
 			countryRecord = null;
 		}
-		debug("Creating state table row.", { state:covidRecord, country:countryRecord });
 		
 		var d = new Object();
 
@@ -630,8 +630,13 @@ class CovidTableMaker {
 		d.stateName = covidRecord.stateInfo.name;
 
 		var stats = covidRecord.stats;
-		var newStats = covidRecord.newStats;
+		d.testedInt = stats.testResultsTotalInt;
+		d.positiveResultsInt = stats.testResultsPositiveInt;
+		d.negativeResultsInt = stats.testResultsNegativeInt;
+		d.hospitalizedInt = stats.hospitalizedInt;
+		d.deathsInt = stats.deathsInt;
 
+		var newStats = covidRecord.newStats;
 		var population = 330 * million;
 		var bedCount = 1 * million;
 
@@ -687,6 +692,11 @@ class CovidTableMaker {
 		d.countyName = countyRecord.countyName;
 
 		var stats = countyRecord.stats;
+		d.testedInt = stats.testResultsTotalInt;
+		d.positiveResultsInt = stats.testResultsPositiveInt;
+		d.negativeResultsInt = stats.testResultsNegativeInt;
+		d.hospitalizedInt = stats.hospitalizedInt;
+		d.deathsInt = stats.deathsInt;
 
 		d.positiveResults = this.createTableValue(countyRecord, "testResultsPositiveInt");
 		if (stateRecord != null) {		

@@ -296,3 +296,39 @@ function showElement(elementId, displayStyle) {
 	displayStyle == (displayStyle == null) ? "block" : displayStyle;
 	element.style.display = displayStyle;
 }
+
+function sortItems(itemArray, propertyName, sortAscending) {
+	if (itemArray == null || itemArray.length == 0) {
+		return;
+	}
+	var sortFunction = function(firstItem, secondItem) {
+		var a = firstItem == null ? null : firstItem[propertyName];
+		var b = secondItem == null ? null : secondItem[propertyName];
+		var result = null;
+		if (a == null) {
+			result = b == null ? 0 : 1;
+		} else if (b == null) { //a is not null, b is null
+			result = 1;
+		} else if (a == b) {
+			result =  0;
+		}
+		if (result == null) {
+			if (Number.isInteger(a) && Number.isInteger(b)) {
+				result = (a > b) ? 1 : -1;
+			} else if (a instanceof Date && b instanceof Date) {
+				if (a.getTime() == b.getTime()) {
+					result =  0;
+				} else {
+					result = (a.getTime() > b.getTime()) ? 1 : -1;
+				}
+			} else {
+				result =  a.toString().localeCompare(b.toString());
+			}
+		}
+		result = sortAscending ? result : result * -1;
+		debug("Comparison result: " + result, {a:a, b:b, result:result });
+		return result;
+	}
+	itemArray.sort(sortFunction);
+}
+
