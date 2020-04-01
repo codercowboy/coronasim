@@ -17,14 +17,16 @@
 	
 	<style>
 		/** { font-size:3vmin; }*/
+		div.scrollExample { display:block; }
 		@media screen and (min-width: 1000px) {
 			/** { font-size:18px; }*/
+			div.scrollExample { display:none; }
 		}
 		.jumbotron, .content { min-height:100%; max-width:1200px; margin-left:auto; 
 			margin-right:auto; padding-bottom:0; margin-bottom:0; }
 		.jumbotron { padding-bottom:0.5rem; }
 		H5 { font-weight:700; }
-		P { margin-left:0.5rem; margin-right:0.5rem; text-align:justify; }
+		P { text-align:justify; }
 		A { color:#3498DB!important; }
 		IMG { max-width:100%; }
 		.section { margin-bottom:1rem; border-top:1px solid rgba(0,0,0,0.15); padding-top:1rem; }
@@ -36,7 +38,30 @@
 		.testResult { padding:0.50rem 1rem; border-left:1px solid rgba(0,0,0,0.15); border-top:1px solid rgba(0,0,0,0.15); margin-bottom:2rem; }
 		.spinnerHolder { width:100%; text-align:center; margin-top:3rem; }
 		.table TD .stats { font-size:x-small; color:gray; display:block; padding-top:0.25rem; }
+		.table TD { min-width:130px; }
 		TH:hover { cursor:s-resize; }
+		TH { font-weight:400;}
+		div.scrollExample {
+  			position:absolute;
+  			top:7rem;
+  			left:4rem;
+  			background-color:#3498DB!important;
+  			padding:1rem;
+  			color:white;
+  			border-radius:0.25rem;
+  			animation-name: scrollExampleAnimation;
+  			animation-duration: 0.5s;
+  			animation-delay: 1s;
+  			animation-iteration-count: 7;
+			animation-direction:alternate-reverse;
+			animation-timing-function:linear;
+			opacity:0.85;
+		}
+
+		@keyframes scrollExampleAnimation {
+  			from { left:3rem;}
+  			to { left:4rem; }
+		}
 	</style>
 
 	<script>		
@@ -44,7 +69,10 @@
 		var statTableCreator = null;
 
 		document.addEventListener('DOMContentLoaded', function() {	
-			debug("Document loaded, loading data.");	
+			debug("Document loaded, loading data.");
+
+			hideElement("countyFormGroup");
+			hideElement("scrollExample");	
 
 			statTableCreator = new TableCreator("statsTableCreator", el("dataTable"));	
 
@@ -73,6 +101,14 @@
 				var hospitalStates = dataManager.statesWithHospitalizationInfo;
 				el("hospitalInfo").innerHTML = "" + hospitalStates.length + " states";
 				debug("Finished creating table.");
+
+			
+				setTimeout(function() { 
+					el("scrollExample").className = "scrollExample";
+					showElement("scrollExample"); 
+				}, 3000);
+				setTimeout(function() { hideElement("scrollExample"); }, 10000);
+				
 			};
 			dataManager = new CovidDataManager(handler);
 
@@ -141,32 +177,34 @@
 		<div class='section'>
 			<p>Country and state-level stats are from the <a href="https://covidtracking.com/data/">Covid Tracking Project</a>. County-level statistics are from the <a href="https://github.com/nytimes/covid-19-data">New York Times covid-19-data</a> data set.</p>
 
-			<p><strong>Note:</strong> Hospitalization data should be considered the lower bound for total hospitalizations. State-level hospitalization data is currently only available for <span id='hospitalInfo'>0 states</span>.
+			<p><strong>Note:</strong> Hospitalization data should be considered the lower bound for total hospitalizations. State-level hospitalization data from the Covid Tracking Project is currently only available for <span id='hospitalInfo'>0 states</span>. <a href="https://covid19.healthdata.org/projections">IHME's Hospital Projections</a> appear to be more accurate. 
 		
 			<p><strong>Note:</strong> This is a beta version. All of the code is on <a href="https://github.com/codercowboy/coronasim">github</a>. Code review me, PLEASE! If you find a bug, please <a href="mailto:jason@onejasonforsale.com">email me</a>!</p>
 		</div>
 
 		<div class='form-row'>
-			<div class='form-group col-md-2'></div>
 			<div class='form-group col-md-3'>
 				<label class='form-label'>State</label>
 				<select class='form-control' id='stateSelector' onChange='updateViewFromSelectedState(); changeTableForSelectedState();'></select>
-			</div>
-			<div class='form-group col-md-3' id='countyFormGroup'>
-				<label class='form-label'>County</label>
-				<select class='form-control' id='countySelector' onChange='changeTableForSelectedState()'></select>
-			</div>
+			</div>			
 			<div class='form-group col-md-2'>
-				<label class='form-label'>Mode</label>
+				<label class='form-label'>Show</label>
 				<select class='form-control' id='modeSelector' onChange='updateViewFromSelectedMode(); changeTableForSelectedState();'>
 					<option>Current</option>
 					<option>History</option>
 				</select>
 			</div>
+			<div class='form-group col-md-3' id='countyFormGroup'>
+				<label class='form-label'>County</label>
+				<select class='form-control' id='countySelector' onChange='changeTableForSelectedState()'></select>
+			</div>
 		</div>
 
-		<div class='simulationOutput pt-3' id='dataTable'>
-			<div class='spinnerHolder'><div class="spinner-border text-primary" role="status"></div></div>
+		<div style="overflow-x:auto; position:relative;">
+			<div id='scrollExample' onclick='hideElement("scrollExample")'>&#x2190;&nbsp;&nbsp;Table Moves Left And Right&nbsp;&nbsp;&#x2192;</div>
+			<div class='simulationOutput pt-3' id='dataTable' onscroll='hideElement("scrollExample")'>
+				<div class='spinnerHolder'><div class="spinner-border text-primary" role="status"></div></div>
+			</div>			
 		</div>
 	</div>		
 </body>
