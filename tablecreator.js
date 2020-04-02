@@ -16,7 +16,8 @@ class TableHeader {
 class TableCreator {		
 	constructor(tableCreatorID, tableParentElement) {
 		this.tableCreatorID = tableCreatorID;
-		this.tableParentElement = tableParentElement;		
+		this.tableParentElement = tableParentElement;	
+		this.defaultValue = "-";	
 		this.reset();
 		if (TableCreator.all == null) {
 			TableCreator.all = [];
@@ -81,7 +82,6 @@ class TableCreator {
 		header.comparePropertyName = comparePropertyName;
 		this.tableHeaders.push(header);
 		this.headerHTML += "<th";
-		console.log("a", { blah:this.headerHTML, comparePropertyName:comparePropertyName });
 		if (comparePropertyName != null) {
 			this.headerHTML += " onclick=\"TableCreator.sortAndRecreateTable('" 
 				+ this.tableCreatorID + "', '" + comparePropertyName + "')\"";
@@ -101,7 +101,7 @@ class TableCreator {
 			for (var header of this.tableHeaders) {
 				var value = record[header.propertyName];
 				if (value == null) {
-					value = "";
+					value = this.defaultValue;
 				} else if (COLUMN_FORMAT_NUMBER == header.columnFormat) {
 					value = value.toLocaleString();
 				} else if (COLUMN_FORMAT_PERCENT == header.columnFormat) {
@@ -109,6 +109,7 @@ class TableCreator {
 				} else if (COLUMN_FORMAT_PERCENT_FLOAT == header.columnFormat) {
 					value = "" + (value * 100.0).toFixed(2) + "%";
 				} 
+
 				html += "<td>" + value + "</td>";
 			}
 			html += "</tr>\n";
