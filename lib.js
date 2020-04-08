@@ -213,7 +213,7 @@ function populateTemplate(template, dayStats, totalStats, currentHospitalizedInt
 	return templateCopy;
 }
 
-function generateSimulationOutput(template, coronaSimSettings) {
+function generateSimulationOutput(coronaSimSettings) {
 	var simulator = new CoronaSimulator(coronaSimSettings);
 	
 	var tableDataArray = [];
@@ -237,6 +237,10 @@ function generateSimulationOutput(template, coronaSimSettings) {
 			break;
 		}
 	}
+	return tableDataArray;
+}
+
+function generateTableHTML(tableDataArray, template, coronaSimSettings) {
 	var html = "<div class='testResults'>\n";
 	for (var tableEntry of tableDataArray) {
 		html += populateTemplate(template, tableEntry.dayStats, tableEntry.totalStats, 
